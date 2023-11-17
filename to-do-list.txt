@@ -1,0 +1,1 @@
+X_FRAME_OPTIONS = 'ALLOW-FROM http://localhost:8000'

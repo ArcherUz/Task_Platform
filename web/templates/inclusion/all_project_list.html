@@ -1,0 +1,27 @@
+
+                <li class="dropdown active">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Project{% if request.tracer.project %}
+                  : {{request.tracer.project.name }}
+                  {% endif %} <span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    {% if my %}
+                        <li><i class="fa-solid fa-list"></i> My projects</li>
+                        {% for item in my %}
+                            <li><a href="{% url 'dashboard' project_id=item.id %}">{{item.name}}</a></li>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if join %}
+                        <li role="separator" class="divider"></li>
+                        <li><i class="fa-regular fa-handshake"></i> Joined projects</li>
+                        {% for item in join %}
+                            <li><a href="{% url 'dashboard' project_id=item.project.id %}">{{item.project.name}}</a></li>
+                        {% endfor %}
+                    {% endif %}
+                    
+
+                    <li role="separator" class="divider"></li>
+
+                    <li><a href="{% url 'project_list' %}">All Projects</a></li>
+                  </ul>
+                </li>

@@ -1,0 +1,62 @@
+{% extends  'layout/basic.html' %}
+{% load static %}
+{% block title %}Login{% endblock title %}
+
+{% block css %}
+  <link rel="stylesheet" href="{% static 'css/account.css' %}">
+{% endblock css %}
+
+{% block content %}
+<div class="account">
+    <div class="title">Login</div>
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        {% for field in form %}
+            {% if field.name == 'code' %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="row">
+                        <div class="col-xs-7">
+                            {{ field }}
+                            <span class="error-msg">{{field.errors.as_text}}</span>
+                        </div>
+                        <div class="col-xs-5">
+                            <img src="{% url 'image_code' %}" id="imageCode" title="Refresh Code">
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    <span class="error-msg">{{field.errors.as_text}}</span>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <div>
+            <div style="float: right;">
+                <a href="{% url 'login_sms' %}">SMS Login</a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-3">
+                <input type="submit" class="btn btn-primary" value="Submit"/>
+            </div>
+        </div>
+    </form>
+</div>
+
+  
+{% endblock content %}
+{% block js %}
+
+<script>
+    $('#imageCode').click(function(){
+        let oldSrc = $(this).attr('src');
+        $(this).attr('src', oldSrc + '?');
+    })
+</script>
+  
+{% endblock js %}

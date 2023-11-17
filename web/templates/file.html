@@ -1,0 +1,243 @@
+{% extends "layout/manage.html" %}
+
+{% block css %}
+  <style>
+    .panel-default .panel-heading {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+    .panel-default > .panel-heading a{
+      text-decoration: none;
+    }
+    .panel-default > .panel-heading span {
+      padding:  0 5px;
+    }
+    .error-msg {
+    color: red;
+    position: absolute;
+}
+  </style>
+{% endblock css %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="panel panel-default" style="margin-top: 20px;">
+    <!-- Default panel contents -->
+    <div class="panel-heading">
+      <div>
+        <a href="{% url 'file' project_id=request.tracer.project.id%}">
+          <i class="fa-solid fa-house"></i>
+          <span>Root</span>
+        </a>
+        {% for record in breadcrumb_list %}
+        <a href="{% url 'file' project_id=request.tracer.project.id%}?folder={{record.id}}">
+          <i class="fa-solid fa-angle-right"></i>
+          <span>{{record.name}}</span>
+        </a>
+        {% endfor %}
+      </div>
+      <div>
+        <a class="btn btn-success btn-xs" data-toggle="modal" data-target="#addModal" data-type="Create new Folder">
+          <i class="fa-solid fa-plus"></i> Create new Folder
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Table -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Size</th>
+          <th>Updater</th>
+          <th>Update time</th>
+          <th>Operate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in file_object_list %}
+        <tr>
+          <td>
+            {% if item.file_type == 1 %}
+            <a>
+              <i class="fa-solid fa-file"></i>
+              {{item.name}}
+            </a>
+            {% else %}
+            <a href="{% url 'file' project_id=request.tracer.project.id%}?folder={{item.id}}">
+              <i class="fa-solid fa-folder"></i>
+              {{item.name}}
+            </a>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.file_type == 1 %}
+              {{item.file_size}}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{item.update_user.username}}</td>
+          <td>{{item.update_datetime}}</td>
+          <td>
+            {% if item.file_type == 2 %}
+            <a 
+            class="btn btn-primary btn-xs " 
+            data-toggle="modal" 
+            data-target="#addModal" 
+            data-type="Edit" 
+            data-name="{{item.name}}"
+            data-fid="{{item.id}}" 
+            >
+              <i class="fa-regular fa-pen-to-square"></i>
+              Edit
+            </a>
+              
+            {% endif %}
+            
+            <a class="btn btn-danger btn-xs" 
+            data-toggle="modal" 
+            data-target="#alertModal" 
+            data-fid="{{item.id}}"
+            >
+              <i class="fa-regular fa-trash-can"></i>
+              Delete
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"></h4>
+      </div>
+      <div class="modal-body">
+        <form id="form">
+          {% for field in form %}
+          {% csrf_token %}
+          <input class="hide" type="text" name="fid" id="fid">
+            <div class="form-group">
+              <label for="{{field.id_for_label}}">{{field.label}}</label>
+              {{field}}
+              <span class="error-msg">{{field.errors.0}}</span>
+            </div>
+          {% endfor %}
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button id="btnFormSubmit" type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="alertModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="alert alert-danger alert-dismissible fade in" role="alert">
+      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+      <h4>Make Sure You want to delete this</h4>
+      <p style="padding-top: 20px;padding-bottom: 20px;">
+        All content within this folder will also be deleted
+      </p>
+      <p style="text-align: right;">
+        <a class="btn btn-default btn-sm" data-dismiss="modal" aria-label="Close">Cancel</a>
+        <button id="btnDelete" type="button" class="btn btn-danger btn-sm">Delete</button>
+    </p>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+
+{% block js %}
+
+  <script>
+
+    var FOLDER_URL = "{% url 'file' project_id=request.tracer.project.id%}";
+    var FILE_DELETE_URL = "{% url 'file_delete' project_id=request.tracer.project.id%}";
+
+
+    $(function(){
+      initAddModal();
+      bindModelSubmit();
+      bindDeleteSubmit();
+    });
+
+    function bindDeleteSubmit(){
+      $('#btnDelete').click(function(){
+        $.ajax({
+          url: FILE_DELETE_URL,
+          type: "GET",
+          data:{fid:$(this).attr('fid')},
+          success: function(res){
+            if (res.status) {
+              location.href = location.href;
+            }
+          }
+        })
+      })
+    }
+
+    function initAddModal(){
+      $('#addModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var type = button.data('type') // Extract info from data-* attributes
+        var name = button.data('name')
+        var fid = button.data('fid')
+        
+        var modal = $(this)
+        modal.find('.modal-title').text(type);
+        
+        if (fid){
+          //Edit
+          modal.find('#id_name').val(name);
+          modal.find('#fid').val(fid);
+        } else {
+          //Create
+          modal.find('.error-msg').empty();
+          //document.getElementById('form').reset();
+          $('#form')[0].reset();
+        }
+
+      });
+
+      $('#alertModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget) // Button that triggered the modal
+        var fid = button.data('fid')
+        
+        var modal = $(this)
+        $('#btnDelete').attr('fid', fid)
+      });
+    }
+
+    function bindModelSubmit(){
+      $('#btnFormSubmit').click(function(){
+        $.ajax({
+          url: location.href,
+          type: "POST",
+          data: $('#form').serialize(),
+          dataType: "json",
+          success: function(res){
+            if (res.status) {
+                location.href = location.href;
+            } else {
+                $.each(res.error, function (key, value) {
+                  $("#id_" + key).next().text(value[0]);
+                })
+            }
+          }
+        })
+      })
+    }
+  </script>
+{% endblock js %}
