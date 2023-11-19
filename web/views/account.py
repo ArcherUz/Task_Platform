@@ -40,7 +40,7 @@ def register(request):
                 aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
                 region_name = settings.AWS_S3_REGION_NAME,
             )
-            folder_name = f"{instance.username}-{instance.mobile_phone}-{datetime.datetime.now()}/"
+            folder_name = f"{instance.username}-{instance.mobile_phone}/"
             s3_client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=folder_name)
         except NoCredentialsError:
             return JsonResponse({'status': False, 'error': 'AWS credentials not available'})
