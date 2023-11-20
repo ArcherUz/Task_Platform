@@ -64,7 +64,7 @@
         <tr>
           <td>
             {% if item.file_type == 1 %}
-            <a>
+            <a href="{{item.s3_presigned_url }}" target="_blank">
               <i class="fa-solid fa-file"></i>
               {{item.name}}
             </a>

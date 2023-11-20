@@ -10,6 +10,13 @@ from botocore.exceptions import ClientError
 
 from django.conf import settings
 
+s3_client = boto3.client(
+        's3',
+        aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
+        region_name = settings.AWS_S3_REGION_NAME,
+    )
+
 def file(request, project_id):
     parent_obj = None
     folder_id = request.GET.get('folder', "")
@@ -32,6 +39,15 @@ def file(request, project_id):
         else:
             file_object_list = queryset.filter(parent__isnull=True).order_by('-file_type')
 
+        
+        for item in file_object_list:
+            if item.file_type == 1:
+                # Generate the presigned URL for file download
+                try:
+                    item.s3_presigned_url = s3_client.generate_presigned_url('get_object', Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': item.key})
+                except ClientError as e:
+                    item.s3_presigned_url = None
+
         form = FolderModelForm(request, parent_obj)
         context = {
             'form': form, 
@@ -40,7 +56,7 @@ def file(request, project_id):
         }
         return render(request, 'file.html', context)
     
-    #POST
+    #POST add folder and change folder name
     fid = request.POST.get('fid', '')
     edit_obj = None
     if fid.isdecimal():
@@ -67,12 +83,6 @@ def file(request, project_id):
 
 
         try:
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
-                region_name = settings.AWS_S3_REGION_NAME,
-            )
             s3_client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=s3_folder_path)
         except Exception as e:
             return JsonResponse({'status': False, 'error': str(e)})
@@ -80,6 +90,7 @@ def file(request, project_id):
         return JsonResponse({'status': True})
 
     return JsonResponse({'status': False, 'error': form.errors})
+
 
 # localhost:8000/manage/1/file/delete/?fid=1
 def file_delete(request, project_id):
@@ -97,7 +108,10 @@ def file_delete(request, project_id):
         region_name=settings.AWS_S3_REGION_NAME,
     )
 
-    if delete_obj.file_type == 1:
+    total_size = 0
+    s3_keys_to_delete = []
+
+    if delete_obj.file_type == 1: #File
         #file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}"
         file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.id}-{delete_obj.name}"
 
@@ -112,20 +126,31 @@ def file_delete(request, project_id):
             return JsonResponse({'status': False, 'error': str(e)})
 
     else:
-        s3_folder_path = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}/"
-        if folder_id.isdecimal():
-            s3_folder_path += f"{folder_id}/"
+        folder_list = [delete_obj,]
+        for folder in folder_list:
+            child_list = models.FileRepository.objects.filter(project=request.tracer.project, parent=folder).order_by('-file_type') #first half is folder, second half is file
+            for child in child_list:
+                if child.file_type == 2:
+                    folder_list.append(child)
+                else: # file
+                    total_size += child.file_size
+                    file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{child.id}-{child.name}"
+                    s3_keys_to_delete.append(file_key)
+
+
+    for key in s3_keys_to_delete:
         try:
-            response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=s3_folder_path)
-            for obj in response.get('Contents', []):
-                s3_client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=obj['Key'])
+            s3_client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
         except ClientError as e:
             return JsonResponse({'status': False, 'error': str(e)})
+        
+    if total_size:
+        request.tracer.project.use_space -= total_size
+        request.tracer.project.save()
 
 
     delete_obj.delete()
     return JsonResponse({'status': True})
-    #return JsonResponse({'status': False, 'error': 'File/Folder not found'})
 
 
 def file_upload(request, project_id):
