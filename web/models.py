@@ -94,7 +94,7 @@ class FileRepository(models.Model):
         (2, 'File'),
     )
     file_type = models.SmallIntegerField(verbose_name='Upload Type', choices=file_type_choices)
-    name = models.CharField(verbose_name='Folder/File Name', max_length=128, help_text='File/Directory Name')
+    name = models.CharField(verbose_name='Folder Name', max_length=128, help_text='Directory Name')
     key = models.CharField(verbose_name='s3 stored key', max_length=128, null=True, blank=True)
     file_size = models.IntegerField(verbose_name='File Size', null=True, blank=True)
     file_path = models.CharField(verbose_name='File Path', max_length=255, null=True, blank=True)

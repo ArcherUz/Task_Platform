@@ -41,6 +41,9 @@
         <a class="btn btn-success btn-xs" data-toggle="modal" data-target="#addModal" data-type="Create new Folder">
           <i class="fa-solid fa-plus"></i> Create new Folder
         </a>
+        <a class="btn btn-success btn-xs" data-toggle="modal" data-target="#uploadModal" data-type="Upload File">
+          <i class="fa-solid fa-upload"></i> Upload File
+        </a>
       </div>
 
     </div>
@@ -157,6 +160,32 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="uploadModalLabel">Upload File</h4>
+      </div>
+      <div class="modal-body">
+        <form id="uploadForm" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="form-group">
+            <label for="fileUpload">Select file</label>
+            <input type="file" id="fileUpload" name="fileUpload">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button id="btnUploadSubmit" type="button" class="btn btn-primary">Upload</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 {% endblock content %}
 
 {% block js %}
@@ -171,7 +200,33 @@
       initAddModal();
       bindModelSubmit();
       bindDeleteSubmit();
+      bindUploadSubmit();
     });
+
+    function bindUploadSubmit(){
+    $('#btnUploadSubmit').click(function(){
+        var formData = new FormData($('#uploadForm')[0]);
+        var folderId = new URLSearchParams(window.location.search).get('folder');
+        if (folderId) {
+            formData.append('folder', folderId);
+        }
+        $.ajax({
+            url: "{% url 'file_upload' project_id=request.tracer.project.id %}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res){
+                if (res.status) {
+                    $('#uploadModal').modal('hide');
+                    location.reload();  // Reload the page to update the file list
+                } else {
+                    alert('Error: ' + res.error);
+                }
+            }
+        });
+    });
+}
 
     function bindDeleteSubmit(){
       $('#btnDelete').click(function(){

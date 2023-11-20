@@ -23,6 +23,6 @@ class FolderModelForm(BootStrapForm, forms.ModelForm):
             exists = queryset.filter(parent__isnull=True).exists()
 
         if exists:
-            raise ValidationError('Folder already exists')
+            raise ValidationError('Folder name already exists')
         return name
         

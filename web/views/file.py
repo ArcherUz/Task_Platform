@@ -86,36 +86,94 @@ def file_delete(request, project_id):
     folder_id = request.GET.get('folder', "")
     fid=request.GET.get('fid')
     delete_obj = models.FileRepository.objects.filter(id=fid, project=request.tracer.project).first()
+
+    if not delete_obj:
+        return JsonResponse({'status': False, 'error': 'Object not found'})
+
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_S3_REGION_NAME,
+    )
+
     if delete_obj.file_type == 1:
-        file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}"
+        #file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}"
+        file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.id}-{delete_obj.name}"
 
 
         #delete file and return use_space
-        request.tracer.project.user_space -= delete_obj.file_size
+        request.tracer.project.use_space -= delete_obj.file_size
         request.tracer.project.save()
 
-        #delete file in s3
-        #pass after finished upload file
+        try:
+            s3_client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_key)
+        except ClientError as e:
+            return JsonResponse({'status': False, 'error': str(e)})
 
     else:
+        s3_folder_path = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}/"
         if folder_id.isdecimal():
-            s3_folder_path = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}-{folder_id}/"
-        else:
-            s3_folder_path = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{delete_obj.name}/"
+            s3_folder_path += f"{folder_id}/"
         try:
-            s3_resource = boto3.client(
-                's3',
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_S3_REGION_NAME,
-            )
-            bucket = s3_resource.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-            for obj in bucket.objects.filter(Prefix=s3_folder_path):
-                obj.delete()
+            response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=s3_folder_path)
+            for obj in response.get('Contents', []):
+                s3_client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=obj['Key'])
         except ClientError as e:
-            return JsonResponse({'status': False, 'error': e})
+            return JsonResponse({'status': False, 'error': str(e)})
 
 
     delete_obj.delete()
     return JsonResponse({'status': True})
     #return JsonResponse({'status': False, 'error': 'File/Folder not found'})
+
+
+def file_upload(request, project_id):
+    
+    if request.method == 'POST':
+        folder_id = request.POST.get('folder', '')  # Get the folder ID from the URL
+        parent_obj = None
+        if folder_id.isdecimal():
+            parent_obj = models.FileRepository.objects.filter(id=int(folder_id), file_type=2, project=request.tracer.project).first()
+
+        file = request.FILES.get('fileUpload')
+        if not file:
+            return JsonResponse({'status': False, 'error': 'No file provided'})
+        
+        max_file_size = 1 * 1024 * 1024 #1MB
+        if file.size > max_file_size:
+            return JsonResponse({'status': False, 'error': 'File size exceeds limit'})
+        
+        file_instance = models.FileRepository.objects.create(
+            project=request.tracer.project,
+            file_type = 1,
+            name=file.name,
+            file_size=file.size,
+            update_user=request.tracer.user,
+            parent= parent_obj,
+
+        )
+        
+        file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{file_instance.id}-{file.name}"
+        try:
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
+                region_name = settings.AWS_S3_REGION_NAME,
+            )
+
+            s3_client.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME, file_key)
+        except Exception as e:
+            file_instance.delete()
+            return JsonResponse({'status': False, 'error': str(e)})
+        
+        file_instance.key = file_key
+        file_instance.save()
+
+        request.tracer.project.use_space += file_instance.file_size
+        request.tracer.project.save()
+
+        return JsonResponse({'status': True})
+    return JsonResponse({'status': False, 'error': 'Invalid request'})
+

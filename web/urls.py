@@ -22,6 +22,7 @@ manage_patterns = [
 
         path('file/', file.file, name='file'),
         path('file/delete/', file.file_delete, name='file_delete'),
+        path('file/upload/', file.file_upload, name='file_upload'),
         path('setting/', manage.setting, name='setting'),
     ]
 
