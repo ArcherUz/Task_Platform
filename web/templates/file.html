@@ -16,7 +16,31 @@
     .error-msg {
     color: red;
     position: absolute;
-}
+    }
+    .panel-default > .panel-heading .function .upload {
+            overflow: hidden;
+        }
+
+        .panel-default > .panel-heading .function .upload input {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 76px;
+            left: -2px;
+            overflow: hidden;
+        }
+
+        .upload-progress {
+            position: fixed;
+            right: 2px;
+            bottom: 2px;
+            width: 400px;
+        }
+
+        .upload-progress .progress-error {
+            color: red;
+        }
   </style>
 {% endblock css %}
 
@@ -37,13 +61,14 @@
         </a>
         {% endfor %}
       </div>
-      <div>
+      <div class="function">
         <a class="btn btn-success btn-xs" data-toggle="modal" data-target="#addModal" data-type="Create new Folder">
           <i class="fa-solid fa-plus"></i> Create new Folder
         </a>
-        <a class="btn btn-success btn-xs" data-toggle="modal" data-target="#uploadModal" data-type="Upload File">
-          <i class="fa-solid fa-upload"></i> Upload File
-        </a>
+        <div class="btn btn-primary btn-xs upload" style="position: relative">
+          <div><i class="fa fa-upload" aria-hidden="true"></i> Upload Files</div>
+          <input type="file" multiple name="uploadFile" id="uploadFile">
+        </div>
       </div>
 
     </div>
@@ -195,38 +220,89 @@
     var FOLDER_URL = "{% url 'file' project_id=request.tracer.project.id%}";
     var FILE_DELETE_URL = "{% url 'file_delete' project_id=request.tracer.project.id%}";
 
-
     $(function(){
       initAddModal();
       bindModelSubmit();
       bindDeleteSubmit();
-      bindUploadSubmit();
+      //bindUploadSubmit();
+      bindUploadFile();
     });
 
-    function bindUploadSubmit(){
-    $('#btnUploadSubmit').click(function(){
-        var formData = new FormData($('#uploadForm')[0]);
+    function bindUploadFile(){
+      $('#uploadFile').change(function(){
+        var fileList = $(this)[0].files;
+        var formData = new FormData();
+        $.each(fileList, function(index, fileObject){
+          formData.append('fileUpload', fileObject);
+        });
         var folderId = new URLSearchParams(window.location.search).get('folder');
         if (folderId) {
             formData.append('folder', folderId);
         }
+
+        var csrftoken = getCookie('csrftoken');
+        formData.append('csrfmiddlewaretoken', csrftoken);
+
+
         $.ajax({
-            url: "{% url 'file_upload' project_id=request.tracer.project.id %}",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(res){
-                if (res.status) {
-                    $('#uploadModal').modal('hide');
-                    location.reload();  // Reload the page to update the file list
-                } else {
-                    alert('Error: ' + res.error);
-                }
-            }
-        });
-    });
-}
+          url: "{% url 'file_upload' project_id=request.tracer.project.id %}",
+          type: "POST",
+          data: formData,
+          processData: false,
+          contentType: false,
+          beforeSend: function(xhr) {
+            xhr.setRequestHeader("X-CSRFToken", csrftoken);
+          },
+          success: function(data){
+            //console.log(data);
+            location.reload();
+          },
+          error: function(res){
+            alert(res.error);
+          }
+        })
+      });
+    }
+
+    function getCookie(name){
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== ''){
+        const cookie = document.cookie.split(';');
+        for (let i=0; i< cookie.length; i++){
+          const cookieItem = jQuery.trim(cookie[i]);
+          if (cookieItem.substring(0, name.length +1) === (name + '=')){
+            cookieValue = decodeURIComponent(cookieItem.substring(name.length +1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+//     function bindUploadSubmit(){
+//     $('#btnUploadSubmit').click(function(){
+//         var formData = new FormData($('#uploadForm')[0]);
+//         var folderId = new URLSearchParams(window.location.search).get('folder');
+//         if (folderId) {
+//             formData.append('folder', folderId);
+//         }
+//         $.ajax({
+//             url: "{% url 'file_upload' project_id=request.tracer.project.id %}",
+//             type: "POST",
+//             data: formData,
+//             processData: false,
+//             contentType: false,
+//             success: function(res){
+//                 if (res.status) {
+//                     $('#uploadModal').modal('hide');
+//                     location.reload();  // Reload the page to update the file list
+//                 } else {
+//                     alert('Error: ' + res.error);
+//                 }
+//             }
+//         });
+//     });
+// }
 
     function bindDeleteSubmit(){
       $('#btnDelete').click(function(){

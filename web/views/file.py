@@ -5,8 +5,10 @@ from web.forms.file import FolderModelForm
 from web import models
 
 import boto3
+#from utils.s3_bucket_config import s3_client
 from botocore.exceptions import NoCredentialsError
 from botocore.exceptions import ClientError
+
 
 from django.conf import settings
 
@@ -101,13 +103,6 @@ def file_delete(request, project_id):
     if not delete_obj:
         return JsonResponse({'status': False, 'error': 'Object not found'})
 
-    s3_client = boto3.client(
-        's3',
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_S3_REGION_NAME,
-    )
-
     total_size = 0
     s3_keys_to_delete = []
 
@@ -181,13 +176,6 @@ def file_upload(request, project_id):
         
         file_key = f"{request.tracer.user.username}-{request.tracer.user.mobile_phone}/{file_instance.id}-{file.name}"
         try:
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id = settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY,
-                region_name = settings.AWS_S3_REGION_NAME,
-            )
-
             s3_client.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME, file_key)
         except Exception as e:
             file_instance.delete()
