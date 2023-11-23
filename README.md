@@ -43,7 +43,10 @@ Projects I participate in: ProjectUser's star=False
 
 ##### 3.Color Selection
 
-> Approach: 1. Exclude the default added color plugin, don't add form-control.   2. Do not use select radio tags in the template.   3. Construct new radio tags.   4. Hide radio options, display color blocks, modify the shape of the color blocks with CSS.
+> Approach: 1. Exclude the default added color plugin, don't add form-control.
+> 2. Do not use select radio tags in the template.
+> 3. Construct new radio tags.
+> 4. Hide radio options, display color blocks, modify the shape of the color blocks with CSS.
 
 3.1 **部分样式应用BootStrapForm**
 
