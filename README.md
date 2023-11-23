@@ -1,48 +1,49 @@
 # Django-TracerProjectManagementPlatform
 
-这是一个项目bug管理平台
+This is a bug management platform for projects
 
-##### 1.完成用户管理
+##### 1.User Management Completed
 
-##### 2.星标
+##### 2.Star Marking
 
-> 思路：在获取项目列表的同时，将用户创建项目以及参与项目，使用字典进行封装。
+> Approach: While retrieving the project list, encapsulate the projects created and participated in by the user using a dictionary.
 >
-> value:表示项目信息
+> 'value':Represents project information
 >
-> type:表示项目类型
+> 'type':Indicates project type
 
-需注意使用path方法类型转化器
+Pay attention to the use of the path method type converter
+
 
 ```python
 path('test/<int:year>/', views.year_test),
-Django 提供了自定义转换器。下面介绍 Django 默认支持的转换器，如下所示：
-str，匹配除了路径分隔符（/）之外的非空字符串，这是默认的形式；
-int，匹配正整数，包含0；
-slug，匹配字母、数字以及横杠、下划线组成的字符串；
-uuid，匹配格式化的 uuid，如 075194d3-6885-417e-a8a8-6c931e272f00；
-path，匹配任何非空字符串，包含了路径分隔符。
+# Django provides custom converters. The following converters are supported by default:
+# str: matches any non-empty string except the path separator (/), which is the default form;
+# int: matches positive integers including 0;
+# slug: matches strings composed of letters, numbers, hyphens, and underscores;
+# uuid: matches formatted uuids, such as 075194d3-6885-417e-a8a8-6c931e272f00;
+# path: matches any non-empty string, including the path separator.
 ```
 
-2.1添加星标（项目收藏、特别关注）
+2.1 Add Star Marking (Project Collection, Special Attention)
 
 ```
-我创建的项目：Project的star=True
-我参与的项目：ProjectUser的star=True
+My created projects: Project's star=True
+Projects I participate in: ProjectUser's star=True
 ```
 
-2.2移除星标
+2.2 Remove Star Marking
 
 ```
-我创建的项目：Project的star=False
-我参与的项目：ProjectUser的star=False
+My created projects: Project's star=False
+Projects I participate in: ProjectUser's star=False
 ```
 
 
 
-##### 3.选择颜色
+##### 3.Color Selection
 
-> 思路：1.排除默认添加的color插件，不添加form-control  2.不使用模板中的select radio标签。3.构建新的radio标签。4.隐藏radio选项，将色块显现，用css对色块形状进行修改。
+> Approach: 1. Exclude the default added color plugin, don't add form-control.   2. Do not use select radio tags in the template.   3. Construct new radio tags.   4. Hide radio options, display color blocks, modify the shape of the color blocks with CSS.
 
 3.1 **部分样式应用BootStrapForm**
 
